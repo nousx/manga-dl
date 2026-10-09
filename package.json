@@ -15,7 +15,8 @@
     "dist": "electron-vite build && electron-builder --win --publish never"
   },
   "dependencies": {
-    "cheerio": "^1.2.0"
+    "cheerio": "^1.2.0",
+    "undici": "^8.11.2"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",

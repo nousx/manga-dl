@@ -1,5 +1,6 @@
+import { Agent, fetch as undiciFetch } from "undici";
 import { AppError } from "./errors";
-import { assertPublicUrl, type HostResolver } from "./net";
+import { createGuardedLookup, parsePublicUrl, unsafeUrl } from "./net";
 import type { Http, TextResponse } from "./types";
 
 const USER_AGENT =
@@ -8,6 +9,23 @@ const MAX_RETRY_AFTER_MS = 30_000;
 const MAX_REDIRECTS = 5;
 const MAX_TEXT_BYTES = 16 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 64 * 1024 * 1024;
+
+export type Fetch = (
+  url: string,
+  init: {
+    headers: Record<string, string>;
+    signal: AbortSignal;
+    redirect: "manual";
+  },
+) => Promise<Response>;
+
+// every socket this agent opens resolves its host through the guard
+const guardedAgent = new Agent({ connect: { lookup: createGuardedLookup() } });
+const guardedFetch: Fetch = (url, init) =>
+  undiciFetch(url, {
+    ...init,
+    dispatcher: guardedAgent,
+  }) as unknown as Promise<Response>;
 
 export interface RetryInfo {
   url: string;
@@ -24,8 +42,8 @@ export interface HttpClientOptions {
   timeoutMs?: number;
   signal?: AbortSignal;
   onRetry?: (info: RetryInfo) => void;
-  /** Replaces the DNS lookup behind the private-network guard (tests). */
-  resolveHost?: HostResolver;
+  /** Replaces the guarded network transport (tests). */
+  fetch?: Fetch;
 }
 
 const cancelled = (): AppError =>
@@ -121,7 +139,7 @@ export class HttpClient implements Http {
   private readonly timeoutMs: number;
   private readonly signal?: AbortSignal;
   private readonly onRetry?: (info: RetryInfo) => void;
-  private readonly resolveHost?: HostResolver;
+  private readonly fetch: Fetch;
   private nextSlot = 0;
 
   constructor(options: HttpClientOptions) {
@@ -130,7 +148,7 @@ export class HttpClient implements Http {
     this.timeoutMs = options.timeoutMs ?? 30_000;
     this.signal = options.signal;
     this.onRetry = options.onRetry;
-    this.resolveHost = options.resolveHost;
+    this.fetch = options.fetch ?? guardedFetch;
   }
 
   getText(url: string, referer?: string): Promise<TextResponse> {
@@ -169,6 +187,9 @@ export class HttpClient implements Http {
 
   private classify(error: unknown, url: string): AppError {
     if (error instanceof AppError) return error;
+    // the guarded lookup rejects inside the socket, so fetch wraps its error
+    if (error instanceof Error && error.cause instanceof AppError)
+      return error.cause;
     if (this.signal?.aborted) return cancelled();
     if (error instanceof Error && error.name === "TimeoutError") {
       return new AppError(
@@ -208,8 +229,9 @@ export class HttpClient implements Http {
     // redirects are followed by hand so every hop passes the same guard
     let current = url;
     for (let hop = 0; ; hop += 1) {
-      await assertPublicUrl(current, this.resolveHost);
-      const response = await fetch(current, {
+      if (!parsePublicUrl(current))
+        throw unsafeUrl(current, "not a public http(s) address");
+      const response = await this.fetch(current, {
         headers,
         signal,
         redirect: "manual",

@@ -10,6 +10,7 @@ import {
 const fixture = (name: string): string =>
   readFileSync(join(import.meta.dirname, "fixtures", name), "utf8");
 
+const HOSTS = ["arenascan.com"];
 const SERIES_URL =
   "https://arenascan.com/manga/reset-life-of-regression-police/";
 const CHAPTER_URL =
@@ -25,7 +26,11 @@ const codeOf = (run: () => unknown): string => {
 };
 
 describe("parseSeriesPage", () => {
-  const parsed = parseSeriesPage(fixture("arenascan-series.html"), SERIES_URL);
+  const parsed = parseSeriesPage(
+    fixture("arenascan-series.html"),
+    SERIES_URL,
+    HOSTS,
+  );
 
   it("should read the series title", () => {
     expect(parsed.title).toBe("Reset Life of Regression Police");
@@ -61,9 +66,25 @@ describe("parseSeriesPage", () => {
       <li data-num="5"><a href="https://www.arenascan.com/title-5/">Chapter 5</a></li>
     </div>`;
 
-    const parsed = parseSeriesPage(html, SERIES_URL);
+    const parsed = parseSeriesPage(html, SERIES_URL, HOSTS);
 
     expect(parsed.chapters.map((chapter) => chapter.number)).toEqual([1, 5]);
+  });
+
+  it("should keep only the module's hosts when the page URL is another site", () => {
+    const html = `<h1 class="entry-title">Title</h1><div id="chapterlist">
+      <li data-num="1"><a href="https://evil.example/title-1/">Chapter 1</a></li>
+      <li data-num="2"><a href="/title-2/">Chapter 2</a></li>
+      <li data-num="3"><a href="https://arenascan.com/title-3/">Chapter 3</a></li>
+    </div>`;
+
+    const parsed = parseSeriesPage(
+      html,
+      "https://evil.example/manga/x/",
+      HOSTS,
+    );
+
+    expect(parsed.chapters.map((chapter) => chapter.number)).toEqual([3]);
   });
 
   it("should throw PARSE_FAILED when the chapter list is absurdly long", () => {
@@ -74,22 +95,22 @@ describe("parseSeriesPage", () => {
     ).join("");
     const html = `<h1 class="entry-title">Title</h1><div id="chapterlist">${items}</div>`;
 
-    expect(codeOf(() => parseSeriesPage(html, SERIES_URL))).toBe(
+    expect(codeOf(() => parseSeriesPage(html, SERIES_URL, HOSTS))).toBe(
       "PARSE_FAILED",
     );
   });
 
   it("should throw PARSE_FAILED when the title is missing", () => {
-    expect(codeOf(() => parseSeriesPage("<html></html>", SERIES_URL))).toBe(
-      "PARSE_FAILED",
-    );
+    expect(
+      codeOf(() => parseSeriesPage("<html></html>", SERIES_URL, HOSTS)),
+    ).toBe("PARSE_FAILED");
   });
 
   it("should throw CHAPTER_LIST_EMPTY when no chapter is listed", () => {
     const html =
       '<h1 class="entry-title">Title</h1><div id="chapterlist"></div>';
 
-    expect(codeOf(() => parseSeriesPage(html, SERIES_URL))).toBe(
+    expect(codeOf(() => parseSeriesPage(html, SERIES_URL, HOSTS))).toBe(
       "CHAPTER_LIST_EMPTY",
     );
   });
