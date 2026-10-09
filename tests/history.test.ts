@@ -2,6 +2,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  realpath,
   rm,
   symlink,
   writeFile,
@@ -224,7 +225,8 @@ describe("scanHistory", () => {
   });
 
   it("should return a verified directory when opening a scanned id", async () => {
-    const folder = await save("good");
+    // the temp dir can be an 8.3 short path, while the scan returns the real one
+    const folder = await realpath(await save("good"));
     const result = await scanHistory(outDir);
 
     const resolved = await resolveHistoryFolder(outDir, result.series[0]?.id);
