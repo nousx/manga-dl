@@ -1,0 +1,72 @@
+{
+  "name": "manga-dl",
+  "version": "0.1.0",
+  "description": "Modular manga downloader with a desktop GUI",
+  "private": true,
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "icons": "powershell -NoProfile -File scripts/generate-icons.ps1",
+    "build": "electron-vite build",
+    "start": "electron-vite build && electron-vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "dist": "electron-vite build && electron-builder --win --publish never"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.7",
+    "vitest": "^5.0.3"
+  },
+  "author": "nousx",
+  "build": {
+    "appId": "manga-dl.desktop",
+    "productName": "manga-dl",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**",
+      "resources/icon.ico",
+      "package.json"
+    ],
+    "win": {
+      "icon": "resources/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-${version}-setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    }
+  }
+}
