@@ -1,9 +1,13 @@
 import { AppError } from "./errors";
+import { assertPublicUrl, type HostResolver } from "./net";
 import type { Http, TextResponse } from "./types";
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 const MAX_RETRY_AFTER_MS = 30_000;
+const MAX_REDIRECTS = 5;
+const MAX_TEXT_BYTES = 16 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 64 * 1024 * 1024;
 
 export interface RetryInfo {
   url: string;
@@ -20,6 +24,8 @@ export interface HttpClientOptions {
   timeoutMs?: number;
   signal?: AbortSignal;
   onRetry?: (info: RetryInfo) => void;
+  /** Replaces the DNS lookup behind the private-network guard (tests). */
+  resolveHost?: HostResolver;
 }
 
 const cancelled = (): AppError =>
@@ -63,6 +69,39 @@ const statusError = (response: Response, url: string): AppError => {
   });
 };
 
+/** Reads a body in chunks and stops as soon as it passes the limit. */
+const readLimited = async (
+  response: Response,
+  limit: number,
+  url: string,
+): Promise<Buffer> => {
+  const tooLarge = (): AppError =>
+    new AppError(
+      "RESPONSE_TOO_LARGE",
+      `Response is larger than ${limit} bytes for ${url}`,
+      { url, limit },
+    );
+  if (Number(response.headers.get("content-length")) > limit) {
+    await response.body?.cancel();
+    throw tooLarge();
+  }
+  const reader = response.body?.getReader();
+  if (!reader) return Buffer.alloc(0);
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > limit) {
+      await reader.cancel();
+      throw tooLarge();
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks);
+};
+
 const isRetryable = (error: AppError): boolean => {
   if (error.code === "NETWORK") return true;
   if (error.code !== "HTTP_STATUS") return false;
@@ -82,6 +121,7 @@ export class HttpClient implements Http {
   private readonly timeoutMs: number;
   private readonly signal?: AbortSignal;
   private readonly onRetry?: (info: RetryInfo) => void;
+  private readonly resolveHost?: HostResolver;
   private nextSlot = 0;
 
   constructor(options: HttpClientOptions) {
@@ -90,18 +130,21 @@ export class HttpClient implements Http {
     this.timeoutMs = options.timeoutMs ?? 30_000;
     this.signal = options.signal;
     this.onRetry = options.onRetry;
+    this.resolveHost = options.resolveHost;
   }
 
   getText(url: string, referer?: string): Promise<TextResponse> {
-    return this.request(url, referer, async (response) => ({
-      text: await response.text(),
-      finalUrl: response.url || url,
+    return this.request(url, referer, async (response, finalUrl) => ({
+      text: (await readLimited(response, MAX_TEXT_BYTES, finalUrl)).toString(
+        "utf8",
+      ),
+      finalUrl,
     }));
   }
 
   getBytes(url: string, referer?: string): Promise<Buffer> {
     return this.request(url, referer, async (response) => {
-      const bytes = Buffer.from(await response.arrayBuffer());
+      const bytes = await readLimited(response, MAX_IMAGE_BYTES, url);
       const declared = response.headers.get("content-length");
       // content-length describes the encoded body, so it only compares when nothing was decoded
       const comparable =
@@ -151,7 +194,7 @@ export class HttpClient implements Http {
   private async attempt<T>(
     url: string,
     referer: string | undefined,
-    read: (response: Response) => Promise<T>,
+    read: (response: Response, finalUrl: string) => Promise<T>,
   ): Promise<T> {
     const timeout = AbortSignal.timeout(this.timeoutMs);
     const signal = this.signal
@@ -162,18 +205,39 @@ export class HttpClient implements Http {
       accept: "*/*",
     };
     if (referer) headers.referer = referer;
-    const response = await fetch(url, { headers, signal, redirect: "follow" });
-    if (!response.ok) {
-      await response.body?.cancel();
-      throw statusError(response, url);
+    // redirects are followed by hand so every hop passes the same guard
+    let current = url;
+    for (let hop = 0; ; hop += 1) {
+      await assertPublicUrl(current, this.resolveHost);
+      const response = await fetch(current, {
+        headers,
+        signal,
+        redirect: "manual",
+      });
+      const location = response.headers.get("location");
+      if (response.status >= 300 && response.status < 400 && location) {
+        await response.body?.cancel();
+        if (hop >= MAX_REDIRECTS) {
+          throw new AppError("HTTP_STATUS", `Too many redirects for ${url}`, {
+            url,
+            status: response.status,
+          });
+        }
+        current = new URL(location, current).toString();
+        continue;
+      }
+      if (!response.ok) {
+        await response.body?.cancel();
+        throw statusError(response, current);
+      }
+      return read(response, current);
     }
-    return read(response);
   }
 
   private async request<T>(
     url: string,
     referer: string | undefined,
-    read: (response: Response) => Promise<T>,
+    read: (response: Response, finalUrl: string) => Promise<T>,
   ): Promise<T> {
     const maxAttempts = this.retries + 1;
     for (let attempt = 1; ; attempt += 1) {

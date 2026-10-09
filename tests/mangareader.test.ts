@@ -52,6 +52,33 @@ describe("parseSeriesPage", () => {
     });
   });
 
+  it("should drop chapter links that leave the site", () => {
+    const html = `<h1 class="entry-title">Title</h1><div id="chapterlist">
+      <li data-num="1"><a href="https://arenascan.com/title-1/">Chapter 1</a></li>
+      <li data-num="2"><a href="http://127.0.0.1:8080/admin">Chapter 2</a></li>
+      <li data-num="3"><a href="https://other.example/title-3/">Chapter 3</a></li>
+      <li data-num="4"><a href="file:///C:/Windows/win.ini">Chapter 4</a></li>
+      <li data-num="5"><a href="https://www.arenascan.com/title-5/">Chapter 5</a></li>
+    </div>`;
+
+    const parsed = parseSeriesPage(html, SERIES_URL);
+
+    expect(parsed.chapters.map((chapter) => chapter.number)).toEqual([1, 5]);
+  });
+
+  it("should throw PARSE_FAILED when the chapter list is absurdly long", () => {
+    const items = Array.from(
+      { length: 10_001 },
+      (_value, index) =>
+        `<li data-num="${index}"><a href="/c-${index}/">c</a></li>`,
+    ).join("");
+    const html = `<h1 class="entry-title">Title</h1><div id="chapterlist">${items}</div>`;
+
+    expect(codeOf(() => parseSeriesPage(html, SERIES_URL))).toBe(
+      "PARSE_FAILED",
+    );
+  });
+
   it("should throw PARSE_FAILED when the title is missing", () => {
     expect(codeOf(() => parseSeriesPage("<html></html>", SERIES_URL))).toBe(
       "PARSE_FAILED",
@@ -100,6 +127,31 @@ describe("parseChapterPage", () => {
       "https://arenascan.com/a/1.jpg",
       "https://arenascan.com/a/2.jpg",
     ]);
+  });
+
+  it("should drop image links that point at a local address", () => {
+    const html = `<div id="readerarea">
+      <img src="https://cdn.arenascan.com/a/1.jpg">
+      <img src="http://192.168.1.1/a/2.jpg">
+      <img src="http://localhost/a/3.jpg">
+      <img src="file:///C:/a/4.jpg">
+    </div>`;
+
+    const parsed = parseChapterPage(html, CHAPTER_URL);
+
+    expect(parsed.imageUrls).toEqual(["https://cdn.arenascan.com/a/1.jpg"]);
+  });
+
+  it("should throw PARSE_FAILED when a chapter lists too many images", () => {
+    const images = Array.from(
+      { length: 2_001 },
+      (_value, index) => `<img src="/a/${index}.jpg">`,
+    ).join("");
+    const html = `<div id="readerarea">${images}</div>`;
+
+    expect(codeOf(() => parseChapterPage(html, CHAPTER_URL))).toBe(
+      "PARSE_FAILED",
+    );
   });
 
   it("should return no images when the reader is empty", () => {

@@ -11,6 +11,8 @@ export type ErrorCode =
   | "CHAPTER_MISMATCH"
   | "IMAGE_CORRUPT"
   | "FILE_SYSTEM"
+  | "UNSAFE_URL"
+  | "RESPONSE_TOO_LARGE"
   | "INVALID_INPUT"
   | "BUSY"
   | "CANCELLED"

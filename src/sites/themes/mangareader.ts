@@ -1,5 +1,6 @@
 import { load } from "cheerio";
 import { AppError } from "../../core/errors";
+import { parsePublicUrl } from "../../core/net";
 import { findMissingNumbers, sortChapters } from "../../core/series";
 import type {
   ChapterPages,
@@ -21,6 +22,12 @@ export interface MangaReaderConfig {
   /** Path prefix of series pages, e.g. "/manga/". */
   seriesPathPrefix: string;
 }
+
+// far above any real series; a page past these is broken or hostile
+const MAX_CHAPTERS = 10_000;
+const MAX_IMAGES = 2_000;
+
+const siteHost = (url: URL): string => url.hostname.replace(/^www\./, "");
 
 interface ReaderPayload {
   sources?: { source?: string; images?: unknown[] }[];
@@ -54,12 +61,16 @@ export const parseSeriesPage = (
     );
   }
 
+  const host = siteHost(new URL(pageUrl));
   const byUrl = new Map<string, ChapterRef>();
   $("#chapterlist li").each((_index, element) => {
     const item = $(element);
     const href = item.find("a[href]").first().attr("href");
     if (!href) return;
-    const url = new URL(href, pageUrl).toString();
+    // page content is untrusted: a chapter link must stay on the site itself
+    const link = parsePublicUrl(href, pageUrl);
+    if (!link || siteHost(link) !== host) return;
+    const url = link.toString();
     const label = item.find(".chapternum").first().text().trim() || slugOf(url);
     byUrl.set(url, {
       id: slugOf(url),
@@ -74,6 +85,13 @@ export const parseSeriesPage = (
       "CHAPTER_LIST_EMPTY",
       "No chapters found in #chapterlist",
       { url: pageUrl, selector: "#chapterlist li" },
+    );
+  }
+  if (byUrl.size > MAX_CHAPTERS) {
+    throw new AppError(
+      "PARSE_FAILED",
+      `Chapter list is too long (${byUrl.size} entries)`,
+      { url: pageUrl, limit: MAX_CHAPTERS },
     );
   }
   return { title, chapters: sortChapters([...byUrl.values()]) };
@@ -125,11 +143,20 @@ export const parseChapterPage = (
       )
       .get();
   const raw = scripted && scripted.length > 0 ? scripted : fallback();
+  if (raw.length > MAX_IMAGES) {
+    throw new AppError(
+      "PARSE_FAILED",
+      `Chapter lists too many images (${raw.length})`,
+      { url: pageUrl, limit: MAX_IMAGES },
+    );
+  }
+  // images may live on another host (a CDN), but never on a local address
   const imageUrls = [
     ...new Set(
       raw
         .filter((image) => image !== "")
-        .map((image) => new URL(image, pageUrl).toString()),
+        .map((image) => parsePublicUrl(image, pageUrl)?.toString() ?? "")
+        .filter((image) => image !== ""),
     ),
   ];
   return {
