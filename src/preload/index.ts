@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 import type { DownloadEvent } from "../core/events";
-import { CHANNELS, type MangaApi } from "../shared/api";
+import { CHANNELS, type MangaApi, type UpdateState } from "../shared/api";
 
 const api: MangaApi = {
   listHistory: () => ipcRenderer.invoke(CHANNELS.listHistory),
@@ -20,6 +20,18 @@ const api: MangaApi = {
     ipcRenderer.on(CHANNELS.downloadEvent, forward);
     return () => {
       ipcRenderer.removeListener(CHANNELS.downloadEvent, forward);
+    };
+  },
+  getUpdateState: () => ipcRenderer.invoke(CHANNELS.getUpdateState),
+  checkForUpdate: () => ipcRenderer.invoke(CHANNELS.checkForUpdate),
+  installUpdate: () => ipcRenderer.invoke(CHANNELS.installUpdate),
+  openReleasePage: () => ipcRenderer.invoke(CHANNELS.openReleasePage),
+  onUpdateState: (listener) => {
+    const forward = (_event: IpcRendererEvent, payload: UpdateState): void =>
+      listener(payload);
+    ipcRenderer.on(CHANNELS.updateState, forward);
+    return () => {
+      ipcRenderer.removeListener(CHANNELS.updateState, forward);
     };
   },
 };

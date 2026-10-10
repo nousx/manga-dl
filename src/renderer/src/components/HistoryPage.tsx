@@ -4,6 +4,7 @@ import type {
   SerializedError,
   SiteInfo,
 } from "../../../shared/api";
+import { useI18n } from "../i18n/context";
 import { ErrorBanner } from "./ErrorBanner";
 
 interface HistoryPageProps {
@@ -13,20 +14,13 @@ interface HistoryPageProps {
   onLoad: (url: string) => void;
 }
 
-const STATUS = { done: "ครบ", incomplete: "ไม่ครบ", failed: "ล้มเหลว" };
-const REASON = {
-  missing: "ไม่พบไฟล์",
-  unreadable: "อ่านไม่ได้",
-  malformed: "ข้อมูลไม่ถูกต้อง",
-  unsafe: "ข้ามลิงก์ไปยังไฟล์หรือโฟลเดอร์อื่น",
-};
-
 export const HistoryPage = ({
   outDir,
   running,
   sites,
   onLoad,
 }: HistoryPageProps) => {
+  const m = useI18n();
   const [history, setHistory] = useState<HistoryResult | null>(null);
   const [error, setError] = useState<SerializedError | null>(null);
   const [refresh, setRefresh] = useState(0);
@@ -56,38 +50,33 @@ export const HistoryPage = ({
     <section className="page-content history-page" aria-busy={loading}>
       <div className="section-heading">
         <div>
-          <h2>เรื่องที่บันทึกไว้</h2>
-          <p className="muted">
-            อ่านจากประวัติในโฟลเดอร์ที่เลือก เก็บไว้แม้ปิดโปรแกรม
-          </p>
+          <h2>{m.history.heading}</h2>
+          <p className="muted">{m.history.description}</p>
         </div>
         <button
           onClick={() => setRefresh((value) => value + 1)}
           disabled={loading}
         >
-          {loading ? "กำลังอ่าน…" : "รีเฟรช"}
+          {loading ? m.history.reading : m.history.refresh}
         </button>
       </div>
       <div className="folder-line">
-        <span>โฟลเดอร์ปัจจุบัน</span>
+        <span>{m.history.currentFolder}</span>
         <code>{outDir}</code>
       </div>
       {error && <ErrorBanner error={error} onDismiss={() => setError(null)} />}
       {loading && !history && (
         <p className="empty" role="status">
-          กำลังอ่านประวัติจากเครื่อง…
+          {m.history.readingHistory}
         </p>
       )}
       {history && history.issues.length > 0 && (
         <details className="notice">
-          <summary>
-            อ่านไม่ได้ {history.issues.length} รายการ ตรวจสอบไฟล์หรือสิทธิ์
-            แล้วกดรีเฟรช
-          </summary>
+          <summary>{m.history.issues(history.issues.length)}</summary>
           <ul>
             {history.issues.map((issue, index) => (
               <li key={index}>
-                <code>{issue.location}</code>: {REASON[issue.reason]}
+                <code>{issue.location}</code>: {m.history.reasons[issue.reason]}
               </li>
             ))}
           </ul>
@@ -98,20 +87,20 @@ export const HistoryPage = ({
           <span className="empty-symbol" aria-hidden="true">
             ▤
           </span>
-          <h2>เริ่มสะสมเรื่องแรก</h2>
+          <h2>{m.history.emptyTitle}</h2>
           <p>
-            เมื่อดาวน์โหลดตอน ประวัติจะรวมไว้ตามเรื่องที่นี่
+            {m.history.emptyLine1}
             <br />
-            ดูตอนที่ครบ ตอนที่ต้องลองใหม่ และเปิดโฟลเดอร์ได้ทันที
+            {m.history.emptyLine2}
           </p>
           <button className="primary" onClick={() => onLoad("")}>
-            ไปหน้าดาวน์โหลด
+            {m.history.goDownload}
           </button>
         </div>
       )}
       {history && history.series.length > 0 && (
         <p className="list-caption">
-          {history.series.length} เรื่อง · เรียงตามการอัปเดตล่าสุด
+          {m.history.caption(history.series.length)}
         </p>
       )}
       {history?.series.map((series) => (
@@ -122,18 +111,20 @@ export const HistoryPage = ({
               <span className="muted">
                 {sites.find((site) => site.id === series.siteId)?.name ??
                   series.siteId}{" "}
-                · {series.pages}/{series.totalPages} รูป
+                · {m.common.pages(series.pages, series.totalPages)}
               </span>
             </div>
             <div className="history-counts">
-              <span className="success">ครบ {series.complete}</span>
-              <span>ไม่ครบ {series.incomplete}</span>
+              <span className="success">
+                {m.history.complete(series.complete)}
+              </span>
+              <span>{m.history.incomplete(series.incomplete)}</span>
               <span className={series.failed ? "failure" : ""}>
-                ล้มเหลว {series.failed}
+                {m.history.failed(series.failed)}
               </span>
             </div>
             <time className="muted" dateTime={series.updatedAt}>
-              {new Date(series.updatedAt).toLocaleString("th-TH", {
+              {new Date(series.updatedAt).toLocaleString(m.intlLocale, {
                 dateStyle: "medium",
                 timeStyle: "short",
               })}
@@ -141,23 +132,21 @@ export const HistoryPage = ({
           </summary>
           <div className="history-actions">
             <button onClick={() => void open(series.id)}>
-              เปิดโฟลเดอร์เรื่อง
+              {m.common.openSeriesFolder}
             </button>
             <button disabled={running} onClick={() => onLoad(series.url)}>
-              โหลดเรื่องนี้ต่อ
+              {m.history.continueSeries}
             </button>
-            {running && (
-              <span className="muted">รอให้งานปัจจุบันจบก่อนเปลี่ยนเรื่อง</span>
-            )}
+            {running && <span className="muted">{m.history.waitForJob}</span>}
           </div>
           <ul className="history-chapters">
             {series.chapters.map((chapter) => (
               <li className={`status-${chapter.status}`} key={chapter.id}>
                 <span>{chapter.label}</span>
                 <span className="muted">
-                  {chapter.pages}/{chapter.totalPages} รูป
+                  {m.common.pages(chapter.pages, chapter.totalPages)}
                 </span>
-                <span className="badge">{STATUS[chapter.status]}</span>
+                <span className="badge">{m.status[chapter.status]}</span>
               </li>
             ))}
           </ul>

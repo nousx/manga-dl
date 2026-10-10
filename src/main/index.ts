@@ -26,8 +26,10 @@ import {
   type SeriesInfo,
   type Settings,
 } from "../shared/api";
+import { pickLocale } from "../shared/locale";
 import { siteAdapters } from "../sites";
 import { applySettingsPatch, loadSettings, saveSettings } from "./settings";
+import { createUpdater, RELEASES_URL, type Updater } from "./updater";
 
 interface LoadedSeries {
   adapter: SiteAdapter;
@@ -38,6 +40,7 @@ let mainWindow: BrowserWindow | null = null;
 let settings: Settings;
 let loaded: LoadedSeries | null = null;
 let activeJob: AbortController | null = null;
+let updater: Updater;
 
 const settingsFile = (): string =>
   join(app.getPath("userData"), "settings.json");
@@ -234,6 +237,25 @@ const registerHandlers = (): void => {
       throw new AppError("FILE_SYSTEM", failure, { path: folder });
     return null;
   });
+
+  handle(CHANNELS.getUpdateState, () => updater.getState());
+
+  handle(CHANNELS.checkForUpdate, () => updater.check());
+
+  handle(CHANNELS.installUpdate, () => {
+    if (activeJob) {
+      throw new AppError("BUSY", "Finish or cancel the download first");
+    }
+    if (!updater.install()) {
+      throw new AppError("INVALID_INPUT", "No update is ready to install");
+    }
+    return null;
+  });
+
+  handle(CHANNELS.openReleasePage, async () => {
+    await shell.openExternal(RELEASES_URL);
+    return null;
+  });
 };
 
 const createWindow = (): void => {
@@ -274,7 +296,11 @@ void app.whenReady().then(async () => {
     outDir: join(app.getPath("downloads"), "manga-dl"),
     imageConcurrency: 4,
     requestDelayMs: 200,
+    language: pickLocale(app.getLocale()),
   });
+  updater = createUpdater((state) =>
+    mainWindow?.webContents.send(CHANNELS.updateState, state),
+  );
   registerHandlers();
   createWindow();
 });

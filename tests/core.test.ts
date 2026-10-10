@@ -51,12 +51,16 @@ describe("findMissingNumbers", () => {
 });
 
 describe("chapterFolderName", () => {
-  it("should zero pad whole numbers", () => {
-    expect(chapterFolderName(chapter(12))).toBe("0012");
+  it("should name the folder after the chapter number", () => {
+    expect(chapterFolderName(chapter(12))).toBe("Chapter 12");
+  });
+
+  it("should keep chapter zero when a series starts with a prologue", () => {
+    expect(chapterFolderName(chapter(0))).toBe("Chapter 0");
   });
 
   it("should keep the decimal part", () => {
-    expect(chapterFolderName(chapter(12.5))).toBe("0012.5");
+    expect(chapterFolderName(chapter(12.5))).toBe("Chapter 12.5");
   });
 
   it("should fall back to the id when there is no number", () => {

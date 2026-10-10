@@ -1,5 +1,6 @@
 import type { ChapterRef } from "../../../shared/api";
-import type { ChapterProgress, ChapterUiStatus } from "../useDownloader";
+import { useI18n } from "../i18n/context";
+import type { ChapterProgress } from "../useDownloader";
 
 interface ChapterRowProps {
   chapter: ChapterRef;
@@ -9,15 +10,6 @@ interface ChapterRowProps {
   onToggle: (id: string) => void;
 }
 
-const STATUS_TEXT: Record<ChapterUiStatus, string> = {
-  none: "ยังไม่โหลด",
-  queued: "รอคิว",
-  running: "กำลังโหลด",
-  done: "ครบ",
-  incomplete: "ไม่ครบ",
-  failed: "ล้มเหลว",
-};
-
 export const ChapterRow = ({
   chapter,
   checked,
@@ -25,6 +17,7 @@ export const ChapterRow = ({
   disabled,
   onToggle,
 }: ChapterRowProps) => {
+  const m = useI18n();
   const status = progress?.status ?? "none";
   const total = progress?.total ?? 0;
   const done = progress?.done ?? 0;
@@ -55,7 +48,7 @@ export const ChapterRow = ({
         </div>
       )}
       <span className="badge">
-        {STATUS_TEXT[status]}
+        {m.status[status]}
         {pages}
       </span>
     </li>

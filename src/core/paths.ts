@@ -18,15 +18,16 @@ export const sanitizeName = (name: string): string => {
 };
 
 /**
- * Folder name for one chapter. Zero padded so folders sort in reading order
- * in any file explorer: 12 -> "0012", 12.5 -> "0012.5".
+ * Folder name for one chapter: 12 -> "Chapter 12", 12.5 -> "Chapter 12.5".
+ * Always English so a folder never depends on the interface language.
+ * Reading order relies on natural sorting (Explorer and MangaX both do it).
  */
-export const chapterFolderName = (chapter: ChapterRef): string => {
-  if (chapter.number === null) return sanitizeName(chapter.id);
-  const [whole = "0", fraction] = String(chapter.number).split(".");
-  const padded = whole.padStart(4, "0");
-  return fraction === undefined ? padded : `${padded}.${fraction}`;
-};
+export const chapterFolderName = (
+  chapter: Pick<ChapterRef, "id" | "number">,
+): string =>
+  chapter.number === null
+    ? sanitizeName(chapter.id)
+    : `Chapter ${chapter.number}`;
 
 export const pageFileName = (pageIndex: number, extension: string): string =>
   `${String(pageIndex).padStart(3, "0")}.${extension}`;

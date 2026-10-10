@@ -6,6 +6,8 @@ import type {
   SeriesInfo,
   Settings,
 } from "../../shared/api";
+import { pickLocale } from "../../shared/locale";
+import { MESSAGES, type Messages } from "./i18n";
 import { describeEvent, type LogEntry } from "./text";
 
 export type ChapterUiStatus =
@@ -26,6 +28,8 @@ export interface JobProgress {
 export interface Downloader {
   series: SeriesInfo | null;
   settings: Settings | null;
+  /** Text for the chosen language; the system language until settings load. */
+  messages: Messages;
   loading: boolean;
   running: boolean;
   error: SerializedError | null;
@@ -67,6 +71,8 @@ export const useDownloader = (): Downloader => {
   const [summary, setSummary] = useState<JobSummary | null>(null);
   const [log, setLog] = useState<LogEntry[]>([]);
   const nextLogId = useRef(0);
+  const messages =
+    MESSAGES[settings?.language ?? pickLocale(navigator.language)];
 
   const patchChapter = (id: string, patch: Partial<ChapterProgress>): void =>
     setProgress((current) => ({
@@ -75,13 +81,15 @@ export const useDownloader = (): Downloader => {
     }));
 
   const handleEvent = (event: DownloadEvent): void => {
-    const line = describeEvent(event);
+    const line = describeEvent(event, messages);
     if (line) {
       nextLogId.current += 1;
       const entry: LogEntry = {
         ...line,
         id: nextLogId.current,
-        time: new Date().toLocaleTimeString("th-TH", { hour12: false }),
+        time: new Date().toLocaleTimeString(messages.intlLocale, {
+          hour12: false,
+        }),
       };
       setLog((current) => [...current, entry].slice(-MAX_LOG_ENTRIES));
     }
@@ -213,6 +221,7 @@ export const useDownloader = (): Downloader => {
   return {
     series,
     settings,
+    messages,
     loading,
     running,
     error,

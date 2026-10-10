@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useI18n } from "../i18n/context";
 import type { LogEntry } from "../text";
 
 interface LogPanelProps {
@@ -8,6 +9,7 @@ interface LogPanelProps {
 }
 
 export const LogPanel = ({ log, onClear, onOpenLogs }: LogPanelProps) => {
+  const m = useI18n();
   const [problemsOnly, setProblemsOnly] = useState(false);
   const [page, setPage] = useState<number | null>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -31,9 +33,9 @@ export const LogPanel = ({ log, onClear, onOpenLogs }: LogPanelProps) => {
     <section className="panel log">
       <div className="log-header">
         <h2>
-          บันทึกการทำงาน
+          {m.log.title}
           {problemCount > 0 && (
-            <span className="count">{problemCount} ข้อผิดพลาด</span>
+            <span className="count">{m.log.errorCount(problemCount)}</span>
           )}
         </h2>
         <label>
@@ -45,10 +47,10 @@ export const LogPanel = ({ log, onClear, onOpenLogs }: LogPanelProps) => {
               setPage(null);
             }}
           />
-          เฉพาะปัญหา
+          {m.log.problemsOnly}
         </label>
         <button type="button" onClick={onOpenLogs}>
-          ไฟล์ log
+          {m.log.logFiles}
         </button>
         <button
           type="button"
@@ -57,7 +59,7 @@ export const LogPanel = ({ log, onClear, onOpenLogs }: LogPanelProps) => {
             onClear();
           }}
         >
-          ล้าง
+          {m.common.clear}
         </button>
       </div>
       {pageCount > 1 && (
@@ -66,25 +68,28 @@ export const LogPanel = ({ log, onClear, onOpenLogs }: LogPanelProps) => {
             disabled={pageIndex === 0}
             onClick={() => setPage(pageIndex - 1)}
           >
-            ก่อนหน้า
+            {m.log.previous}
           </button>
           <span>
-            {pageIndex * 100 + 1}–
-            {Math.min((pageIndex + 1) * 100, shown.length)} จาก {shown.length}
+            {m.log.range(
+              pageIndex * 100 + 1,
+              Math.min((pageIndex + 1) * 100, shown.length),
+              shown.length,
+            )}
           </span>
           <button
             disabled={pageIndex === pageCount - 1}
             onClick={() => setPage(pageIndex + 1)}
           >
-            ถัดไป
+            {m.log.next}
           </button>
           <button disabled={page === null} onClick={() => setPage(null)}>
-            ติดตามล่าสุด
+            {m.log.follow}
           </button>
         </div>
       )}
       <ul className="log-list" ref={listRef}>
-        {shown.length === 0 && <li className="muted">ยังไม่มีรายการ</li>}
+        {shown.length === 0 && <li className="muted">{m.log.empty}</li>}
         {visible.map((entry) => (
           <li key={entry.id} className={`log-${entry.level}`}>
             <span className="time">{entry.time}</span>

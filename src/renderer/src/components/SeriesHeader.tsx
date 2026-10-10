@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { SeriesInfo } from "../../../shared/api";
+import { useI18n } from "../i18n/context";
 import { formatBytes } from "../text";
 import type { ChapterProgress, JobProgress } from "../useDownloader";
 
@@ -37,6 +38,7 @@ export const SeriesHeader = ({
   onCancel,
   onOpenFolder,
 }: SeriesHeaderProps) => {
+  const m = useI18n();
   const [rangeText, setRangeText] = useState("");
   const range = parseRange(rangeText);
   const { chapters, missingNumbers } = series;
@@ -68,15 +70,13 @@ export const SeriesHeader = ({
       <div className="series-title">
         <h1>{series.title}</h1>
         <span className="muted">
-          {series.siteName} · {chapters.length} ตอน · มีในเครื่องครบ {doneCount}{" "}
-          ตอน
+          {m.series.meta(series.siteName, chapters.length, doneCount)}
         </span>
       </div>
 
       {missingNumbers.length > 0 && (
         <p className="notice">
-          เว็บต้นทางไม่มี {missingNumbers.length} ตอน: {listedGaps}
-          {moreGaps > 0 && ` และอีก ${moreGaps} ตอน`}
+          {m.series.gaps(missingNumbers.length, listedGaps, moreGaps)}
         </p>
       )}
 
@@ -86,23 +86,23 @@ export const SeriesHeader = ({
           disabled={running}
           onClick={() => onSelect(chapters.map((chapter) => chapter.id))}
         >
-          เลือกทั้งหมด
+          {m.series.selectAll}
         </button>
         <button
           type="button"
           disabled={running}
           onClick={() => onSelect(notDone.map((chapter) => chapter.id))}
         >
-          เลือกที่ยังไม่ครบ
+          {m.series.selectUnfinished}
         </button>
         <button type="button" disabled={running} onClick={() => onSelect([])}>
-          ล้าง
+          {m.common.clear}
         </button>
         <input
           type="text"
           className="range"
-          aria-label="ช่วงตอน เช่น 1-20"
-          placeholder="ช่วงตอน เช่น 1-20"
+          aria-label={m.series.rangeLabel}
+          placeholder={m.series.rangeLabel}
           value={rangeText}
           disabled={running}
           onChange={(event) => setRangeText(event.target.value)}
@@ -115,15 +115,15 @@ export const SeriesHeader = ({
           disabled={running || !range}
           onClick={selectRange}
         >
-          เลือกช่วง
+          {m.series.selectRange}
         </button>
         <span className="spacer" />
         <button type="button" onClick={onOpenFolder}>
-          เปิดโฟลเดอร์เรื่อง
+          {m.common.openSeriesFolder}
         </button>
         {running ? (
           <button type="button" className="danger" onClick={onCancel}>
-            ยกเลิก
+            {m.series.cancel}
           </button>
         ) : (
           <button
@@ -132,7 +132,7 @@ export const SeriesHeader = ({
             disabled={selectedCount === 0}
             onClick={onStart}
           >
-            โหลด {selectedCount} ตอน
+            {m.series.download(selectedCount)}
           </button>
         )}
       </div>
@@ -142,7 +142,7 @@ export const SeriesHeader = ({
           <div
             className="bar"
             role="progressbar"
-            aria-label="ความคืบหน้าทั้งหมด"
+            aria-label={m.series.overallProgress}
             aria-valuenow={job.finished}
             aria-valuemin={0}
             aria-valuemax={job.total}
@@ -150,7 +150,11 @@ export const SeriesHeader = ({
             <div className="fill" style={{ width: `${percent}%` }} />
           </div>
           <span className="muted">
-            {job.finished}/{job.total} ตอน · {formatBytes(job.bytes)}
+            {m.series.jobProgress(
+              job.finished,
+              job.total,
+              formatBytes(job.bytes),
+            )}
           </span>
         </div>
       )}

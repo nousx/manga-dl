@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { SiteInfo } from "../../../shared/api";
+import { useI18n } from "../i18n/context";
 
 interface SitesPageProps {
   sites: SiteInfo[];
@@ -8,25 +9,28 @@ interface SitesPageProps {
 }
 
 export const SitesPage = ({ sites, running, onLoad }: SitesPageProps) => {
-  const [feedback, setFeedback] = useState("");
+  const m = useI18n();
+  // stored as an outcome, not as text, so it follows a language change
+  const [copied, setCopied] = useState<boolean | null>(null);
   const copy = async (url: string): Promise<void> => {
     try {
       await navigator.clipboard.writeText(url);
-      setFeedback("คัดลอกลิงก์แล้ว");
+      setCopied(true);
     } catch {
-      setFeedback("คัดลอกไม่ได้ เลือกลิงก์ด้านบนแล้วกด Ctrl+C");
+      setCopied(false);
     }
   };
+  const feedback =
+    copied === null ? "" : copied ? m.sites.copied : m.sites.copyFailed;
+
   return (
     <section className="page-content sites-page">
       <div className="section-heading">
         <div>
-          <h2>เว็บไซต์ที่พร้อมใช้งาน</h2>
-          <p className="muted">
-            วางลิงก์หน้าเรื่องจากเว็บไซต์เหล่านี้ เพื่อเลือกตอนที่ต้องการ
-          </p>
+          <h2>{m.sites.heading}</h2>
+          <p className="muted">{m.sites.description}</p>
         </div>
-        <span className="muted">{sites.length} เว็บไซต์</span>
+        <span className="muted">{m.sites.count(sites.length)}</span>
       </div>
       <div className="site-list">
         {sites.map((site) => (
@@ -39,15 +43,15 @@ export const SitesPage = ({ sites, running, onLoad }: SitesPageProps) => {
                 <h3>{site.name}</h3>
                 <p>{site.domains.join(" · ")}</p>
               </div>
-              <span className="site-ready">✓ รองรับ</span>
+              <span className="site-ready">✓ {m.sites.supported}</span>
             </div>
             <dl>
               <div>
-                <dt>เอนจิน</dt>
+                <dt>{m.sites.engine}</dt>
                 <dd>{site.engine}</dd>
               </div>
               <div>
-                <dt>ลิงก์ตัวอย่าง</dt>
+                <dt>{m.sites.exampleLink}</dt>
                 <dd>
                   <code className="selectable">{site.exampleUrl}</code>
                 </dd>
@@ -59,16 +63,12 @@ export const SitesPage = ({ sites, running, onLoad }: SitesPageProps) => {
                 disabled={running}
                 onClick={() => onLoad(site.exampleUrl)}
               >
-                ลองโหลดเรื่องนี้
+                {m.sites.tryExample}
               </button>
               <button onClick={() => void copy(site.exampleUrl)}>
-                คัดลอกลิงก์
+                {m.sites.copyLink}
               </button>
-              {running && (
-                <span className="muted">
-                  เปลี่ยนเรื่องได้เมื่องานปัจจุบันจบ
-                </span>
-              )}
+              {running && <span className="muted">{m.sites.waitForJob}</span>}
             </div>
           </article>
         ))}
@@ -77,12 +77,12 @@ export const SitesPage = ({ sites, running, onLoad }: SitesPageProps) => {
         {feedback}
       </p>
       <div className="site-note">
-        <h3>เพิ่มเว็บไซต์ใหม่ได้</h3>
+        <h3>{m.sites.addTitle}</h3>
         <p>
-          เพิ่มไฟล์ของเว็บไซต์ใน <code>src/sites/</code> แล้วลงทะเบียนใน{" "}
-          <code>src/sites/index.ts</code>
+          {m.sites.addBefore} <code>src/sites/</code> {m.sites.addBetween}{" "}
+          <code>src/sites/index.ts</code> {m.sites.addAfter}
           <br />
-          เว็บไซต์ที่ใช้ธีมเดียวกัน ใช้โมดูลอ่านข้อมูลร่วมกันได้
+          {m.sites.addShared}
         </p>
       </div>
     </section>

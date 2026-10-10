@@ -1,4 +1,6 @@
 import { SETTING_LIMITS, type Settings } from "../../../shared/api";
+import { isLocale, LOCALE_NAMES, LOCALES } from "../../../shared/locale";
+import { useI18n } from "../i18n/context";
 
 interface SettingsBarProps {
   settings: Settings;
@@ -18,23 +20,24 @@ export const SettingsBar = ({
   onOpenFolder,
   onChange,
 }: SettingsBarProps) => {
+  const m = useI18n();
   const { imageConcurrency, requestDelayMs } = SETTING_LIMITS;
 
   return (
     <div className="settings">
-      <span className="label">บันทึกที่</span>
+      <span className="label">{m.settings.saveTo}</span>
       <code className="path" title={settings.outDir}>
         {settings.outDir}
       </code>
       <button type="button" disabled={disabled} onClick={onPickFolder}>
-        เปลี่ยน
+        {m.settings.change}
       </button>
       <button type="button" onClick={onOpenFolder}>
-        เปิดโฟลเดอร์
+        {m.settings.openFolder}
       </button>
 
       <label>
-        โหลดพร้อมกัน
+        {m.settings.concurrencyBefore}
         <input
           type="number"
           min={imageConcurrency.min}
@@ -50,10 +53,10 @@ export const SettingsBar = ({
             })
           }
         />
-        รูป
+        {m.settings.concurrencyAfter}
       </label>
       <label>
-        หน่วง
+        {m.settings.delay}
         <input
           type="number"
           min={requestDelayMs.min}
@@ -71,6 +74,23 @@ export const SettingsBar = ({
           }
         />
         ms
+      </label>
+      <label>
+        {m.settings.language}
+        <select
+          value={settings.language}
+          disabled={disabled}
+          onChange={(event) => {
+            const { value } = event.target;
+            if (isLocale(value)) onChange({ language: value });
+          }}
+        >
+          {LOCALES.map((locale) => (
+            <option key={locale} value={locale} lang={locale}>
+              {LOCALE_NAMES[locale]}
+            </option>
+          ))}
+        </select>
       </label>
     </div>
   );

@@ -2,6 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import { AppError } from "../core/errors";
 import { SETTING_LIMITS, type Settings } from "../shared/api";
+import { isLocale } from "../shared/locale";
 
 const isIntegerBetween = (
   value: unknown,
@@ -20,9 +21,8 @@ export const applySettingsPatch = (
   if (typeof patch !== "object" || patch === null) {
     throw new AppError("INVALID_INPUT", "Settings patch must be an object");
   }
-  const { outDir, imageConcurrency, requestDelayMs } = patch as Partial<
-    Record<keyof Settings, unknown>
-  >;
+  const { outDir, imageConcurrency, requestDelayMs, language } =
+    patch as Partial<Record<keyof Settings, unknown>>;
   const next = { ...current };
   if (outDir !== undefined) {
     if (typeof outDir !== "string" || !isAbsolute(outDir)) {
@@ -42,6 +42,12 @@ export const applySettingsPatch = (
     }
     next.requestDelayMs = requestDelayMs;
   }
+  if (language !== undefined) {
+    if (!isLocale(language)) {
+      throw new AppError("INVALID_INPUT", "language is not supported");
+    }
+    next.language = language;
+  }
   return next;
 };
 
@@ -50,10 +56,14 @@ export const loadSettings = async (
   defaults: Settings,
 ): Promise<Settings> => {
   try {
-    return applySettingsPatch(
-      defaults,
-      JSON.parse(await readFile(file, "utf8")),
-    );
+    const saved: unknown = JSON.parse(await readFile(file, "utf8"));
+    // a file without a language was written before other languages existed,
+    // when the interface was Thai only: keep it Thai instead of switching
+    const patch =
+      typeof saved === "object" && saved !== null && !("language" in saved)
+        ? { ...saved, language: "th" }
+        : saved;
+    return applySettingsPatch(defaults, patch);
   } catch {
     // first run or a hand-edited file that no longer validates
     return defaults;

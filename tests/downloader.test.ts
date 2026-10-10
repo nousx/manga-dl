@@ -1,8 +1,20 @@
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { detectImageExtension, downloadChapters } from "../src/core/downloader";
+import {
+  detectImageExtension,
+  downloadChapters,
+  renameLegacyFolders,
+} from "../src/core/downloader";
 import { AppError } from "../src/core/errors";
 import type { DownloadEvent } from "../src/core/events";
 import type { Manifest } from "../src/core/manifest";
@@ -95,7 +107,8 @@ describe("downloadChapters", () => {
       signal,
     });
 
-  const chapterDir = (): string => join(outDir, "example", "Series", "0001");
+  const seriesDir = (): string => join(outDir, "example", "Series");
+  const chapterDir = (): string => join(seriesDir(), "Chapter 1");
 
   beforeEach(async () => {
     outDir = await mkdtemp(join(tmpdir(), "manga-dl-test-"));
@@ -135,7 +148,7 @@ describe("downloadChapters", () => {
 
     expect(manifest.chapters[chapterOne.id]).toMatchObject({
       status: "done",
-      folder: "0001",
+      folder: "Chapter 1",
       pages: [
         { index: 1, file: "001.jpg", status: "ok", bytes: JPEG.length },
         { index: 2, file: "002.jpg", status: "ok", bytes: JPEG.length },
@@ -213,6 +226,68 @@ describe("downloadChapters", () => {
 
     expect(summary.cancelled).toBe(true);
     expect(summary.done).toBe(0);
+  });
+
+  describe("folders saved by an older version", () => {
+    const manifestPath = (): string => join(seriesDir(), "manifest.json");
+    const readManifest = async (): Promise<Manifest> =>
+      JSON.parse(await readFile(manifestPath(), "utf8")) as Manifest;
+    /** Rewrites a finished download so it looks like the zero-padded layout. */
+    const makeLegacy = async (folder: string): Promise<Manifest> => {
+      await run(
+        adapterWith(pagesOf(2)),
+        httpWith(() => JPEG),
+      );
+      await rename(chapterDir(), join(seriesDir(), folder));
+      const manifest = await readManifest();
+      const record = manifest.chapters[chapterOne.id];
+      if (!record) throw new Error("chapter record missing");
+      record.folder = folder;
+      await writeFile(manifestPath(), JSON.stringify(manifest));
+      return manifest;
+    };
+
+    it("should move the folder to the new name and skip the chapter when it is intact", async () => {
+      await makeLegacy("0001");
+      const http = httpWith(() => JPEG);
+
+      const summary = await run(adapterWith(pagesOf(2)), http);
+
+      expect(summary).toMatchObject({ skipped: 1, done: 0 });
+      expect(http.requested).toEqual([]);
+      expect((await readdir(seriesDir())).sort()).toEqual([
+        "Chapter 1",
+        "manifest.json",
+      ]);
+      expect((await readManifest()).chapters[chapterOne.id]?.folder).toBe(
+        "Chapter 1",
+      );
+    });
+
+    it("should keep the old folder when the new name is already taken", async () => {
+      const manifest = await makeLegacy("0001");
+      await mkdir(chapterDir());
+
+      const changed = await renameLegacyFolders(seriesDir(), manifest);
+
+      expect(changed).toBe(false);
+      expect(manifest.chapters[chapterOne.id]?.folder).toBe("0001");
+    });
+
+    it("should not move anything when the recorded folder points outside the series", async () => {
+      const manifest = await makeLegacy("0001");
+      const outside = join(outDir, "outside");
+      await mkdir(outside);
+      const record = manifest.chapters[chapterOne.id];
+      if (!record) throw new Error("chapter record missing");
+      record.folder = "../../outside";
+
+      const changed = await renameLegacyFolders(seriesDir(), manifest);
+
+      expect(changed).toBe(false);
+      expect(await readdir(outDir)).toContain("outside");
+      expect(await readdir(seriesDir())).not.toContain("Chapter 1");
+    });
   });
 });
 

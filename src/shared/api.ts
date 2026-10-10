@@ -3,6 +3,7 @@ import type { DownloadEvent } from "../core/events";
 import type { ChapterStatus } from "../core/manifest";
 import type { Series } from "../core/types";
 import type { HistoryResult } from "../core/history";
+import type { Locale } from "./locale";
 export type {
   HistoryResult,
   HistorySeries,
@@ -33,6 +34,27 @@ export interface Settings {
   outDir: string;
   imageConcurrency: number;
   requestDelayMs: number;
+  language: Locale;
+}
+
+export type UpdateStatus =
+  | "unsupported"
+  | "idle"
+  | "checking"
+  | "up-to-date"
+  | "downloading"
+  | "ready"
+  | "error";
+
+export interface UpdateState {
+  status: UpdateStatus;
+  /** Why this build cannot update itself; null when it can. */
+  unsupportedReason: "development" | "portable" | null;
+  currentVersion: string;
+  /** Version being downloaded or waiting to be installed. */
+  version: string | null;
+  percent: number;
+  message: string | null;
 }
 
 export interface SiteInfo {
@@ -63,6 +85,11 @@ export interface MangaApi {
   pickOutputFolder(): Promise<Result<Settings>>;
   openFolder(target: FolderTarget): Promise<Result<null>>;
   onDownloadEvent(listener: (event: DownloadEvent) => void): () => void;
+  getUpdateState(): Promise<Result<UpdateState>>;
+  checkForUpdate(): Promise<Result<UpdateState>>;
+  installUpdate(): Promise<Result<null>>;
+  openReleasePage(): Promise<Result<null>>;
+  onUpdateState(listener: (state: UpdateState) => void): () => void;
 }
 
 export const CHANNELS = {
@@ -77,4 +104,9 @@ export const CHANNELS = {
   pickOutputFolder: "settings:pick-folder",
   openFolder: "shell:open-folder",
   downloadEvent: "download:event",
+  getUpdateState: "update:get",
+  checkForUpdate: "update:check",
+  installUpdate: "update:install",
+  openReleasePage: "update:open-releases",
+  updateState: "update:state",
 } as const;

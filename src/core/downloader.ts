@@ -1,11 +1,12 @@
-import { mkdir, rename, stat, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { lstat, mkdir, rename, stat, writeFile } from "node:fs/promises";
+import { basename, join } from "node:path";
 import { AppError, serializeError, toAppError } from "./errors";
 import type { EmitEvent, JobSummary } from "./events";
 import {
   loadManifest,
   saveManifest,
   type ChapterRecord,
+  type Manifest,
   type PageRecord,
 } from "./manifest";
 import { chapterFolderName, pageFileName, seriesDirectory } from "./paths";
@@ -233,6 +234,41 @@ const settleStatus = (record: ChapterRecord): void => {
   record.updatedAt = new Date().toISOString();
 };
 
+/**
+ * Chapters saved by an older version sit in zero-padded folders ("0012").
+ * Moves them to the current name so one series never mixes both styles.
+ * A folder that cannot be moved keeps working under its old name.
+ */
+export const renameLegacyFolders = async (
+  seriesDir: string,
+  manifest: Manifest,
+): Promise<boolean> => {
+  let changed = false;
+  for (const record of Object.values(manifest.chapters)) {
+    const target = chapterFolderName(record);
+    if (record.folder === target) continue;
+    // the manifest is a file on disk: only ever move a plain folder name
+    const plainName =
+      record.folder === basename(record.folder) &&
+      !["", ".", ".."].includes(record.folder);
+    if (!plainName) continue;
+    try {
+      // lstat throws when nothing is in the way, which is the case we want
+      const occupied = await lstat(join(seriesDir, target)).then(
+        () => true,
+        () => false,
+      );
+      if (occupied) continue;
+      await rename(join(seriesDir, record.folder), join(seriesDir, target));
+      record.folder = target;
+      changed = true;
+    } catch {
+      // missing or locked folder: leave the record pointing at the old name
+    }
+  }
+  return changed;
+};
+
 export const downloadChapters = async (
   options: DownloadOptions,
 ): Promise<JobSummary> => {
@@ -240,6 +276,8 @@ export const downloadChapters = async (
   const seriesDir = seriesDirectory(outDir, series);
   await mkdir(seriesDir, { recursive: true });
   const manifest = await loadManifest(seriesDir, series);
+  if (await renameLegacyFolders(seriesDir, manifest))
+    await saveManifest(seriesDir, manifest);
   const summary: JobSummary = {
     seriesDir,
     requested: chapters.length,

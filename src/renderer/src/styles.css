@@ -52,8 +52,19 @@ body {
   display: none !important;
 }
 button,
-input {
+input,
+select {
   font: inherit;
+}
+select {
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--control-border);
+  border-radius: 5px;
+  padding: 5px 8px;
+}
+select:disabled {
+  opacity: 0.45;
 }
 button {
   color: var(--text);
@@ -231,8 +242,32 @@ nav button[aria-current="page"] span {
   padding: 14px 10px 0;
   color: var(--muted);
   font-size: 11px;
+  display: grid;
+  gap: 8px;
+}
+.sidebar-footer .version {
   display: flex;
   justify-content: space-between;
+}
+.update-status {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.update-status p {
+  margin: 0;
+}
+.update-status button {
+  font-size: 12px;
+  white-space: normal;
+}
+.update-ready {
+  color: var(--accent);
+  font-weight: 600;
+}
+.update-failed {
+  color: var(--bad);
 }
 .workspace {
   display: flex;
@@ -817,4 +852,16 @@ dd {
 .chapters .chapter-list {
   flex: none;
   overflow: visible;
+}
+
+/* Chinese, Japanese and Korean share many characters but draw them differently,
+   so each language names its own font instead of sharing one fallback list. */
+:root:lang(zh) {
+  font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+}
+:root:lang(ja) {
+  font-family: "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif;
+}
+:root:lang(ko) {
+  font-family: "Segoe UI", "Malgun Gothic", sans-serif;
 }

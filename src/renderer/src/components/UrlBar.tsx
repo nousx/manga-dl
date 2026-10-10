@@ -1,4 +1,5 @@
 import { type FormEvent } from "react";
+import { useI18n } from "../i18n/context";
 
 interface UrlBarProps {
   url: string;
@@ -15,6 +16,7 @@ export const UrlBar = ({
   disabled,
   onSubmit,
 }: UrlBarProps) => {
+  const m = useI18n();
   const trimmed = url.trim();
 
   const submit = (event: FormEvent): void => {
@@ -25,12 +27,12 @@ export const UrlBar = ({
   return (
     <form className="url-bar" onSubmit={submit}>
       <input
-        aria-label="ลิงก์หน้าเรื่อง"
+        aria-label={m.url.label}
         disabled={disabled || loading}
         type="text"
         value={url}
         spellCheck={false}
-        placeholder="https://arenascan.com/manga/<ชื่อเรื่อง>/"
+        placeholder={m.url.placeholder}
         onChange={(event) => onChange(event.target.value)}
       />
       <button
@@ -38,7 +40,7 @@ export const UrlBar = ({
         className="primary"
         disabled={loading || disabled || trimmed === ""}
       >
-        {loading ? "กำลังดึง..." : "ดึงข้อมูล"}
+        {loading ? m.url.fetching : m.url.fetch}
       </button>
     </form>
   );
