@@ -274,6 +274,46 @@ describe("downloadChapters", () => {
       expect(manifest.chapters[chapterOne.id]?.folder).toBe("0001");
     });
 
+    it("should stay inside the series folder when the recorded number is a path", async () => {
+      const manifest = await makeLegacy("0001");
+      const record = manifest.chapters[chapterOne.id];
+      if (!record) throw new Error("chapter record missing");
+      // a hand-edited manifest: the type says number, the file says otherwise
+      record.number = "../../escaped" as unknown as number;
+
+      await renameLegacyFolders(seriesDir(), manifest);
+
+      // the bogus number is ignored and the id names the folder instead
+      expect(await readdir(outDir)).toEqual(["example"]);
+      expect((await readdir(seriesDir())).sort()).toEqual([
+        "manifest.json",
+        chapterOne.id,
+      ]);
+    });
+
+    it("should download again when a saved page name points outside the chapter", async () => {
+      await run(
+        adapterWith(pagesOf(1)),
+        httpWith(() => JPEG),
+      );
+      const secret = join(outDir, "secret.jpg");
+      await writeFile(secret, JPEG);
+      const manifest = await readManifest();
+      const page = manifest.chapters[chapterOne.id]?.pages[0];
+      if (!page) throw new Error("page record missing");
+      page.file = "../../../secret.jpg";
+      await writeFile(manifestPath(), JSON.stringify(manifest));
+      const http = httpWith(() => JPEG);
+
+      const summary = await run(adapterWith(pagesOf(1)), http);
+
+      expect(summary).toMatchObject({ skipped: 0, done: 1 });
+      expect(http.requested).toHaveLength(1);
+      expect(
+        (await readManifest()).chapters[chapterOne.id]?.pages[0]?.file,
+      ).toBe("001.jpg");
+    });
+
     it("should not move anything when the recorded folder points outside the series", async () => {
       const manifest = await makeLegacy("0001");
       const outside = join(outDir, "outside");

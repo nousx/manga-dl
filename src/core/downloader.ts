@@ -1,5 +1,5 @@
 import { lstat, mkdir, rename, stat, writeFile } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { AppError, serializeError, toAppError } from "./errors";
 import type { EmitEvent, JobSummary } from "./events";
 import {
@@ -9,7 +9,12 @@ import {
   type Manifest,
   type PageRecord,
 } from "./manifest";
-import { chapterFolderName, pageFileName, seriesDirectory } from "./paths";
+import {
+  chapterFolderName,
+  isPlainName,
+  pageFileName,
+  seriesDirectory,
+} from "./paths";
 import type { ChapterRef, Http, Series, SiteAdapter } from "./types";
 
 export interface DownloadOptions {
@@ -83,8 +88,9 @@ const isIntact = async (
   page: PageRecord | undefined,
   url: string,
 ): Promise<boolean> => {
-  if (!page || page.status !== "ok" || page.file === null || page.url !== url)
-    return false;
+  if (!page || page.status !== "ok" || page.url !== url) return false;
+  // saved records are untrusted: a file name must stay inside the chapter folder
+  if (!isPlainName(page.file)) return false;
   return (await fileSize(join(chapterDir, page.file))) === page.bytes;
 };
 
@@ -94,6 +100,7 @@ const isChapterIntact = async (
 ): Promise<boolean> => {
   if (!record || record.status !== "done" || record.pages.length === 0)
     return false;
+  if (!isPlainName(record.folder)) return false;
   const chapterDir = join(seriesDir, record.folder);
   const checks = await Promise.all(
     record.pages.map((page) => isIntact(chapterDir, page, page.url)),
@@ -247,11 +254,8 @@ export const renameLegacyFolders = async (
   for (const record of Object.values(manifest.chapters)) {
     const target = chapterFolderName(record);
     if (record.folder === target) continue;
-    // the manifest is a file on disk: only ever move a plain folder name
-    const plainName =
-      record.folder === basename(record.folder) &&
-      !["", ".", ".."].includes(record.folder);
-    if (!plainName) continue;
+    // the manifest is a file on disk: both ends of the move must be plain names
+    if (!isPlainName(record.folder) || !isPlainName(target)) continue;
     try {
       // lstat throws when nothing is in the way, which is the case we want
       const occupied = await lstat(join(seriesDir, target)).then(

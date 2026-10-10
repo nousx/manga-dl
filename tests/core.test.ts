@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { AppError } from "../src/core/errors";
-import { chapterFolderName, sanitizeName } from "../src/core/paths";
+import {
+  chapterFolderName,
+  isPlainName,
+  sanitizeName,
+} from "../src/core/paths";
 import { resolveSite } from "../src/core/registry";
 import { findMissingNumbers } from "../src/core/series";
 import type { ChapterRef } from "../src/core/types";
@@ -65,6 +69,46 @@ describe("chapterFolderName", () => {
 
   it("should fall back to the id when there is no number", () => {
     expect(chapterFolderName(chapter(null, "side-story"))).toBe("side-story");
+  });
+});
+
+describe("isPlainName", () => {
+  it.each(["Chapter 1", "001.jpg", "0012.5", "side-story"])(
+    "should accept %s",
+    (name) => {
+      expect(isPlainName(name)).toBe(true);
+    },
+  );
+
+  it.each([
+    "",
+    ".",
+    "..",
+    "../x",
+    "a/b",
+    "a\\b",
+    "..\\x",
+    "C:x",
+    "C:\\Windows",
+    null,
+    undefined,
+    5,
+  ])("should reject %s", (name) => {
+    expect(isPlainName(name)).toBe(false);
+  });
+});
+
+describe("chapterFolderName with untrusted input", () => {
+  it("should ignore a number that is not a number", () => {
+    const record = { id: "safe-id", number: "../../x" as unknown as number };
+
+    expect(chapterFolderName(record)).toBe("safe-id");
+  });
+
+  it("should strip separators from an id used as the fallback", () => {
+    const record = { id: "../../x", number: null };
+
+    expect(isPlainName(chapterFolderName(record))).toBe(true);
   });
 });
 
