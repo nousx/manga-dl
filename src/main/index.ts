@@ -12,7 +12,8 @@ import { join } from "node:path";
 import { downloadChapters } from "../core/downloader";
 import { AppError, serializeError } from "../core/errors";
 import type { DownloadEvent } from "../core/events";
-import { HttpClient } from "../core/http";
+import { HttpClient, type HttpClientOptions } from "../core/http";
+import { closeComixReaders, createComixHttp } from "./comix-browser";
 import { scanHistory, resolveHistoryFolder } from "../core/history";
 import { loadManifest } from "../core/manifest";
 import { seriesDirectory } from "../core/paths";
@@ -45,6 +46,11 @@ let updater: Updater;
 const settingsFile = (): string =>
   join(app.getPath("userData"), "settings.json");
 const logsDirectory = (): string => join(settings.outDir, "logs");
+
+const siteHttp = (adapter: SiteAdapter, options: HttpClientOptions) => {
+  const http = new HttpClient(options);
+  return adapter.id === "comix" ? createComixHttp(http, options.signal) : http;
+};
 
 const handle = <T>(
   channel: string,
@@ -101,7 +107,7 @@ const runJob = async (
       chapters: series.chapters.filter((chapter) => wanted.has(chapter.id)),
       outDir: settings.outDir,
       imageConcurrency: settings.imageConcurrency,
-      http: new HttpClient({
+      http: siteHttp(adapter, {
         minDelayMs: settings.requestDelayMs,
         signal: controller.signal,
         onRetry: (info) => emit({ type: "retry", ...info }),
@@ -151,7 +157,7 @@ const registerHandlers = (): void => {
     const { adapter, url } = resolveSite(siteAdapters, input);
     const series = await adapter.getSeries(
       url,
-      new HttpClient({ minDelayMs: settings.requestDelayMs }),
+      siteHttp(adapter, { minDelayMs: settings.requestDelayMs }),
     );
     loaded = { adapter, series };
     return describeSaved(series);
@@ -279,6 +285,8 @@ const createWindow = (): void => {
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   mainWindow.webContents.on("will-navigate", (event) => event.preventDefault());
   mainWindow.on("closed", () => {
+    activeJob?.abort();
+    closeComixReaders();
     mainWindow = null;
   });
 
