@@ -1,0 +1,126 @@
+{
+ "data": [
+  {
+   "slug": "chapter-17",
+   "number": 17,
+   "title": null,
+   "requiresPurchase": true,
+   "createdAt": "2026-11-07T17:17:03.144Z"
+  },
+  {
+   "slug": "chapter-16",
+   "number": 16,
+   "title": null,
+   "requiresPurchase": true,
+   "createdAt": "2026-11-07T16:31:26.446Z"
+  },
+  {
+   "slug": "chapter-15",
+   "number": 15,
+   "title": null,
+   "requiresPurchase": true,
+   "createdAt": "2026-11-07T17:10:45.119Z"
+  },
+  {
+   "slug": "chapter-14",
+   "number": 14,
+   "title": null,
+   "requiresPurchase": false,
+   "createdAt": "2026-11-07T16:59:40.142Z"
+  },
+  {
+   "slug": "chapter-13-the-tigers-shadow-revealed",
+   "number": 13,
+   "title": "The Tiger's Shadow Revealed",
+   "requiresPurchase": false,
+   "createdAt": "2026-11-07T16:59:35.058Z"
+  },
+  {
+   "slug": "chapter-12",
+   "number": 12,
+   "title": null,
+   "requiresPurchase": false,
+   "createdAt": "2026-11-07T17:18:22.475Z"
+  },
+  {
+   "slug": "chapter-11",
+   "number": 11,
+   "title": null,
+   "requiresPurchase": false,
+   "createdAt": "2026-11-07T17:32:09.798Z"
+  },
+  {
+   "slug": "chapter-10",
+   "number": 10,
+   "title": null,
+   "requiresPurchase": false,
+   "createdAt": "2026-11-07T17:19:24.292Z"
+  },
+  {
+   "slug": "chapter-9",
+   "number": 9,
+   "title": null,
+   "requiresPurchase": false,
+   "createdAt": "2026-11-07T16:54:17.119Z"
+  },
+  {
+   "slug": "chapter-8",
+   "number": 8,
+   "title": null,
+   "requiresPurchase": false,
+   "createdAt": "2026-11-07T17:12:20.991Z"
+  },
+  {
+   "slug": "chapter-7",
+   "number": 7,
+   "title": null,
+   "requiresPurchase": false,
+   "createdAt": "2026-11-07T17:44:17.531Z"
+  },
+  {
+   "slug": "chapter-6",
+   "number": 6,
+   "title": null,
+   "requiresPurchase": false,
+   "createdAt": "2026-11-07T16:36:06.933Z"
+  },
+  {
+   "slug": "chapter-5",
+   "number": 5,
+   "title": null,
+   "requiresPurchase": false,
+   "createdAt": "2026-11-07T17:15:39.298Z"
+  },
+  {
+   "slug": "chapter-4",
+   "number": 4,
+   "title": null,
+   "requiresPurchase": false,
+   "createdAt": "2026-11-07T17:15:39.364Z"
+  },
+  {
+   "slug": "chapter-3",
+   "number": 3,
+   "title": null,
+   "requiresPurchase": false,
+   "createdAt": "2026-11-07T17:32:05.050Z"
+  },
+  {
+   "slug": "chapter-2",
+   "number": 2,
+   "title": null,
+   "requiresPurchase": false,
+   "createdAt": "2026-11-07T18:15:14.347Z"
+  },
+  {
+   "slug": "chapter-1",
+   "number": 1,
+   "title": null,
+   "requiresPurchase": false,
+   "createdAt": "2026-11-07T17:44:20.959Z"
+  }
+ ],
+ "totalItems": 17,
+ "nextCursor": null,
+ "hasMore": false
+}

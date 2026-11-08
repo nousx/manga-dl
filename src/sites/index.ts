@@ -3,6 +3,7 @@ import { arenascan } from "./arenascan";
 import { kingofshojo } from "./kingofshojo";
 import { divascans } from "./divascans";
 import { comix } from "./comix";
+import { qimanga } from "./qimanga";
 
 /** Register a new site by adding its adapter to this list. */
 export const siteAdapters: SiteAdapter[] = [
@@ -10,4 +11,5 @@ export const siteAdapters: SiteAdapter[] = [
   kingofshojo,
   divascans,
   comix,
+  qimanga,
 ];

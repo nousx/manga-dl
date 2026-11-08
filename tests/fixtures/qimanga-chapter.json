@@ -1,0 +1,91 @@
+{
+ "number": 1,
+ "slug": "chapter-1",
+ "requiresPurchase": false,
+ "images": [
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/wz6hsbmGMV/YU3562/00.webp",
+   "order": 0
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/wstu_ImPkX/9xbYaj/01.webp",
+   "order": 1
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/LH4cD5CZhc/RwZaZ3/02.webp",
+   "order": 2
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/J97tXWfz3P/goSBaW/03.webp",
+   "order": 3
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/5ckepOsWws/Qfs9Bh/04.webp",
+   "order": 4
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/WakGhVzMvo/KnhrMS/05.webp",
+   "order": 5
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/bUwH1RXFhH/RBxOa7/06.webp",
+   "order": 6
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/-at7pfgh20/Yp87PD/07.webp",
+   "order": 7
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/H-h90tqMgO/KFX-Hq/08.webp",
+   "order": 8
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/5WRuJ3ltut/zBEayq/09.webp",
+   "order": 9
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/6wWXhiEkpL/pcqv0D/10.webp",
+   "order": 10
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/I8XZAQof5f/VdeWCM/11.webp",
+   "order": 11
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/Z8AqhwxR7_/2V6f6p/12.webp",
+   "order": 12
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/g4nmTlLHJj/0ZXSAo/13.webp",
+   "order": 13
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/UhF-RCObFe/Zo411u/14.webp",
+   "order": 14
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/Pv1sJ9FQ6S/RaAX3K/15.webp",
+   "order": 15
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/TsFrfJKyw6/vIFh_7/16.webp",
+   "order": 16
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/fmN-G2n5jd/OU-vow/17.webp",
+   "order": 17
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/0MBsGZjxWh/z_QAtz/18.webp",
+   "order": 18
+  },
+  {
+   "url": "https://media.qimanga.com/file/qiscans/upload/series/agent-reborn/pzi6RPLniu/vRYJ7E/19.webp",
+   "order": 19
+  }
+ ],
+ "series": {
+  "slug": "agent-reborn",
+  "title": "Agent Reborn"
+ }
+}
